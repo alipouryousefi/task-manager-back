@@ -5,6 +5,7 @@ const path = require("path");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes")
 const userRoutes = require("./routes/userRoutes")
+const taskRoutes = require("./routes/taskRoutes")
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use(express.json())
 
 app.use("/api/auth",authRoutes)
 app.use("/api/users",userRoutes)
-// app.use("/api/tasks",tasRoutes)
+app.use("/api/tasks",taskRoutes)
 // app.use("/api/reports",reportRoutes)
 
 
