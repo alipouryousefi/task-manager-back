@@ -1,24 +1,26 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import User, { IUser } from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { RegisterRequest, LoginRequest, UpdateProfileRequest } from '../types/auth.types';
+import { AppError } from '../types/error.types';
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || '', { expiresIn: '7d' });
 };
 
-export const registerUser = async (req: Request<{}, {}, RegisterRequest>, res: Response): Promise<void> => {
+export const registerUser = async (
+  req: Request<{}, {}, RegisterRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { name, email, password, profileImageUrl, adminInviteToken } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      res.status(400).json({
-        message: 'User already exists',
-      });
-      return;
+      throw new AppError(400, 'User already exists');
     }
 
     let role: 'admin' | 'member' = 'member';
@@ -46,23 +48,25 @@ export const registerUser = async (req: Request<{}, {}, RegisterRequest>, res: R
       token: generateToken((user._id as { toString(): string }).toString()),
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const loginUser = async (req: Request<{}, {}, LoginRequest>, res: Response): Promise<void> => {
+export const loginUser = async (
+  req: Request<{}, {}, LoginRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
+      throw new AppError(401, 'Invalid email or password');
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
+      throw new AppError(401, 'Invalid email or password');
     }
 
     res.json({
@@ -74,31 +78,36 @@ export const loginUser = async (req: Request<{}, {}, LoginRequest>, res: Respons
       token: generateToken((user._id as { toString(): string }).toString()),
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+export const getUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const user = await User.findById(req.user?._id).select('-password');
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+      throw new AppError(404, 'User not found');
     }
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const updateUserProfile = async (req: Request<{}, {}, UpdateProfileRequest>, res: Response): Promise<void> => {
+export const updateUserProfile = async (
+  req: Request<{}, {}, UpdateProfileRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const user = await User.findById(req.user?._id);
 
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+      throw new AppError(404, 'User not found');
     }
 
     user.name = req.body.name || user.name;
@@ -119,6 +128,6 @@ export const updateUserProfile = async (req: Request<{}, {}, UpdateProfileReques
       token: generateToken((updatedUser._id as { toString(): string }).toString()),
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 }; 

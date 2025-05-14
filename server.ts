@@ -5,6 +5,7 @@ import connectDB from './config/db';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import taskRoutes from './routes/taskRoutes';
+import { errorHandler } from './middlewares/errorMiddleware';
 
 dotenv.config();
 
@@ -29,6 +30,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 // app.use('/api/reports', reportRoutes);
+
+// Error handling middleware
+app.use(errorHandler);
 
 // Start Server
 const PORT: number = parseInt(process.env.PORT || '5000', 10);

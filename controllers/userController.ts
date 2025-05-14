@@ -1,9 +1,14 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Task from '../models/Task';
 import User, { IUser } from '../models/User';
 import { UserWithTaskCounts } from '../types/user.types';
+import { AppError } from '../types/error.types';
 
-export const getUsers = async (req: Request, res: Response): Promise<void> => {
+export const getUsers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const users = await User.find({ role: 'member' }).select('-password');
 
@@ -35,25 +40,22 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 
     res.json(userWithTaskCounts);
   } catch (err) {
-    res.status(500).json({
-      message: 'Server error',
-      error: err instanceof Error ? err.message : 'Unknown error',
-    });
+    next(err);
   }
 };
 
-export const getUserById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const getUserById = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+      throw new AppError(404, 'User not found');
     }
     res.json(user);
   } catch (err) {
-    res.status(500).json({
-      message: 'Server error',
-      error: err instanceof Error ? err.message : 'Unknown error',
-    });
+    next(err);
   }
 }; 

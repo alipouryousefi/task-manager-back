@@ -1,10 +1,15 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Task, { ITask } from '../models/Task';
 import User, { IUser } from '../models/User';
 import ExcelJS from 'exceljs';
 import { UserTaskStats, UserTaskMap } from '../types/user.types';
+import { AppError } from '../types/error.types';
 
-export const exportTasksReport = async (req: Request, res: Response): Promise<void> => {
+export const exportTasksReport = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const tasks = await Task.find().populate<{ assignedTo: IUser[] }>('assignedTo', 'name email');
 
@@ -49,11 +54,15 @@ export const exportTasksReport = async (req: Request, res: Response): Promise<vo
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const exportUsersReport = async (req: Request, res: Response): Promise<void> => {
+export const exportUsersReport = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const users = await User.find().select('name email _id').lean();
     const userTasks = await Task.find().populate<{ assignedTo: IUser[] }>('assignedTo', 'name email _id');
@@ -117,6 +126,6 @@ export const exportUsersReport = async (req: Request, res: Response): Promise<vo
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 }; 

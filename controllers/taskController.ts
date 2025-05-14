@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Task, { ITask } from '../models/Task';
 import { IUser } from '../models/User';
 import { FilterQuery } from 'mongoose';
+import { AppError } from '../types/error.types';
 import {
   TaskQuery,
   CreateTaskRequest,
@@ -12,7 +13,11 @@ import {
   StatusSummary
 } from '../types/task.types';
 
-export const getTasks = async (req: Request<{}, {}, {}, TaskQuery>, res: Response): Promise<void> => {
+export const getTasks = async (
+  req: Request<{}, {}, {}, TaskQuery>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { status } = req.query;
     let filter: FilterQuery<ITask> = {};
@@ -69,32 +74,38 @@ export const getTasks = async (req: Request<{}, {}, {}, TaskQuery>, res: Respons
       } as StatusSummary,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const getTaskById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const getTaskById = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const task = await Task.findById(req.params.id).populate('assignedTo', 'name email profileImageUrl');
 
     if (!task) {
-      res.status(404).json({ message: 'Task not found!!!' });
-      return;
+      throw new AppError(404, 'Task not found');
     }
 
     res.json(task);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const createTask = async (req: Request<{}, {}, CreateTaskRequest>, res: Response): Promise<void> => {
+export const createTask = async (
+  req: Request<{}, {}, CreateTaskRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { title, description, priority, dueDate, assignedTo, attachments, todoChecklist } = req.body;
 
     if (!Array.isArray(assignedTo)) {
-      res.status(400).json({ message: 'assignedTo must be an array of user IDs' });
-      return;
+      throw new AppError(400, 'assignedTo must be an array of user IDs');
     }
 
     const task = await Task.create({
@@ -110,17 +121,20 @@ export const createTask = async (req: Request<{}, {}, CreateTaskRequest>, res: R
 
     res.status(201).json({ message: 'Task created successfully', task });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const updateTask = async (req: Request<{ id: string }, {}, UpdateTaskRequest>, res: Response): Promise<void> => {
+export const updateTask = async (
+  req: Request<{ id: string }, {}, UpdateTaskRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const task = await Task.findById(req.params.id);
 
     if (!task) {
-      res.status(404).json({ message: 'Task not found!!!' });
-      return;
+      throw new AppError(404, 'Task not found');
     }
 
     task.title = req.body.title || task.title;
@@ -132,8 +146,7 @@ export const updateTask = async (req: Request<{ id: string }, {}, UpdateTaskRequ
 
     if (req.body.assignedTo) {
       if (!Array.isArray(req.body.assignedTo)) {
-        res.status(400).json({ message: 'assignedTo must be an array of user IDs' });
-        return;
+        throw new AppError(400, 'assignedTo must be an array of user IDs');
       }
       task.assignedTo = req.body.assignedTo;
     }
@@ -145,16 +158,19 @@ export const updateTask = async (req: Request<{ id: string }, {}, UpdateTaskRequ
       task: updatedTask,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const deleteTask = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const deleteTask = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
-      res.status(404).json({ message: 'Task not found!!!' });
-      return;
+      throw new AppError(404, 'Task not found');
     }
 
     await task.deleteOne();
@@ -162,19 +178,19 @@ export const deleteTask = async (req: Request<{ id: string }>, res: Response): P
       message: 'Task deleted successfully',
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
 export const updateTaskStatus = async (
   req: Request<{ id: string }, {}, UpdateTaskStatusRequest>,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) {
-      res.status(404).json({ message: 'Task not found!!!' });
-      return;
+      throw new AppError(404, 'Task not found');
     }
 
     const isAssigned = task.assignedTo.some(
@@ -182,8 +198,7 @@ export const updateTaskStatus = async (
     );
 
     if (!isAssigned && req.user?.role !== 'admin') {
-      res.status(403).json({ message: 'Not authorized' });
-      return;
+      throw new AppError(403, 'Not authorized');
     }
 
     task.status = req.body.status || task.status;
@@ -196,27 +211,24 @@ export const updateTaskStatus = async (
     await task.save();
     res.json({ message: 'Task status updated', task });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
 export const updateTaskChecklist = async (
   req: Request<{ id: string }, {}, UpdateTaskChecklistRequest>,
-  res: Response
+  res: Response,
+  next: NextFunction
 ): Promise<void> => {
   try {
     const { todoChecklist } = req.body;
     const task = await Task.findById(req.params.id);
     if (!task) {
-      res.status(404).json({ message: 'Task not found!!!' });
-      return;
+      throw new AppError(404, 'Task not found');
     }
 
     if (!task.assignedTo.includes(req.user?._id) && req.user?.role !== 'admin') {
-      res.status(403).json({
-        message: 'Not authorized to update the checklist',
-      });
-      return;
+      throw new AppError(403, 'Not authorized to update the checklist');
     }
 
     task.todoChecklist = todoChecklist;
@@ -241,11 +253,15 @@ export const updateTaskChecklist = async (
       updatedTask,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const getDashboardData = async (req: Request, res: Response): Promise<void> => {
+export const getDashboardData = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const allTasks = await Task.countDocuments();
     const pendingTasks = await Task.countDocuments({ status: 'Pending' });
@@ -259,11 +275,15 @@ export const getDashboardData = async (req: Request, res: Response): Promise<voi
       completedTasks,
     } as StatusSummary);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 };
 
-export const getUserDashboardData = async (req: Request, res: Response): Promise<void> => {
+export const getUserDashboardData = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const allTasks = await Task.countDocuments({ assignedTo: req.user?._id });
     const pendingTasks = await Task.countDocuments({ assignedTo: req.user?._id, status: 'Pending' });
@@ -277,6 +297,6 @@ export const getUserDashboardData = async (req: Request, res: Response): Promise
       completedTasks,
     } as StatusSummary);
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err instanceof Error ? err.message : 'Unknown error' });
+    next(err);
   }
 }; 
