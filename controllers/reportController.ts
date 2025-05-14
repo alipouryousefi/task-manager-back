@@ -2,19 +2,7 @@ import { Request, Response } from 'express';
 import Task, { ITask } from '../models/Task';
 import User, { IUser } from '../models/User';
 import ExcelJS from 'exceljs';
-
-interface UserTaskStats {
-  name: string;
-  email: string;
-  taskCount: number;
-  pendingTasks: number;
-  inProgressTasks: number;
-  completedTasks: number;
-}
-
-interface UserTaskMap {
-  [key: string]: UserTaskStats;
-}
+import { UserTaskStats, UserTaskMap } from '../types/user.types';
 
 export const exportTasksReport = async (req: Request, res: Response): Promise<void> => {
   try {

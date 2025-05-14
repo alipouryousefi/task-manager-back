@@ -1,50 +1,16 @@
 import { Request, Response } from 'express';
-import Task, { ITask, ITodo } from '../models/Task';
+import Task, { ITask } from '../models/Task';
 import { IUser } from '../models/User';
 import { FilterQuery } from 'mongoose';
-
-interface TaskQuery {
-  status?: 'Pending' | 'In Progress' | 'Completed';
-}
-
-interface CreateTaskRequest {
-  title: string;
-  description?: string;
-  priority: 'Low' | 'Medium' | 'High';
-  dueDate: Date;
-  assignedTo: string[];
-  attachments?: string[];
-  todoChecklist?: ITodo[];
-}
-
-interface UpdateTaskRequest {
-  title?: string;
-  description?: string;
-  priority?: 'Low' | 'Medium' | 'High';
-  dueDate?: Date;
-  assignedTo?: string[];
-  attachments?: string[];
-  todoChecklist?: ITodo[];
-}
-
-interface UpdateTaskStatusRequest {
-  status: 'Pending' | 'In Progress' | 'Completed';
-}
-
-interface UpdateTaskChecklistRequest {
-  todoChecklist: ITodo[];
-}
-
-interface TaskWithCompletedCount extends Omit<ITask, 'todoChecklist'> {
-  completedTodoCount: number;
-}
-
-interface StatusSummary {
-  all: number;
-  pendingTasks: number;
-  inProgressTasks: number;
-  completedTasks: number;
-}
+import {
+  TaskQuery,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  UpdateTaskStatusRequest,
+  UpdateTaskChecklistRequest,
+  TaskWithCompletedCount,
+  StatusSummary
+} from '../types/task.types';
 
 export const getTasks = async (req: Request<{}, {}, {}, TaskQuery>, res: Response): Promise<void> => {
   try {

@@ -2,25 +2,7 @@ import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-interface RegisterRequest {
-  name: string;
-  email: string;
-  password: string;
-  profileImageUrl?: string;
-  adminInviteToken?: string;
-}
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-interface UpdateProfileRequest {
-  name?: string;
-  email?: string;
-  password?: string;
-}
+import { RegisterRequest, LoginRequest, UpdateProfileRequest } from '../types/auth.types';
 
 const generateToken = (userId: string): string => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET || '', { expiresIn: '7d' });

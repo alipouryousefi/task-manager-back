@@ -1,20 +1,7 @@
 import { Request, Response } from 'express';
 import Task from '../models/Task';
 import User, { IUser } from '../models/User';
-
-interface UserWithTaskCounts {
-  _id: unknown;
-  name: string;
-  email: string;
-  profileImageUrl: string | null;
-  role: 'admin' | 'member';
-  createdAt: Date;
-  updatedAt: Date;
-  pendingTask: number;
-  inProgressTask: number;
-  completedTask: number;
-  [key: string]: unknown;
-}
+import { UserWithTaskCounts } from '../types/user.types';
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
   try {
